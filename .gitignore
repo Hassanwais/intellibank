@@ -1,0 +1,19 @@
+# Virtual environments
+venv/
+tf_env/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Large files
+*.pyd
+*.dll
+*.lib
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables
+.env
