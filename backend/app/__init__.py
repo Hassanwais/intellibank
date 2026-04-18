@@ -21,15 +21,25 @@ mongo_client = None
 # JWT identity functions - FIX for "Subject must be a string" error
 @jwt.user_identity_loader
 def user_identity_lookup(user):
-    """Convert user_id to string when storing in JWT"""
+    """Convert user identity to string for storage in JWT"""
+    if hasattr(user, 'user_id'):
+        return str(user.user_id)
     return str(user)
 
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
-    """Convert string user_id back to int when loading from JWT"""
-    identity = jwt_data["sub"]
-    from app.models.user import User
-    return User.query.filter_by(user_id=int(identity)).one_or_none()
+    """Load user object from database based on JWT identity"""
+    try:
+        identity = jwt_data.get("sub")
+        if not identity:
+            return None
+            
+        from app.models.user import User
+        # Convert identity to integer safely
+        user_id = int(str(identity).split('.')[0]) if str(identity).isdigit() or (isinstance(identity, str) and identity.replace('.','',1).isdigit()) else int(identity)
+        return User.query.get(user_id)
+    except (ValueError, TypeError, AttributeError):
+        return None
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -61,14 +71,14 @@ def create_app(config_class=Config):
             app.mongo_db.audit_logs.create_index("user_id")
             app.mongo_db.fraud_alerts.create_index("created_at")
             app.mongo_db.fraud_alerts.create_index("status")
-            print("✅ MongoDB indexes created successfully!")
+            print("MongoDB indexes created successfully!")
         except Exception as e:
-            print(f"⚠️ MongoDB index creation warning: {e}")
+            print(f"MongoDB index creation warning: {e}")
         
-        print("✅ MongoDB connected successfully!")
+        print("MongoDB connected successfully!")
         
     except Exception as e:
-        print(f"⚠️ MongoDB connection error: {e}")
+        print(f"MongoDB connection error: {e}")
         print("Continuing without MongoDB...")
         mongo_client = None
         app.mongo_db = None
@@ -86,6 +96,11 @@ def create_app(config_class=Config):
     from app.routes.transactions import transactions_bp
     from app.routes.fraud import fraud_bp  # Add this line
     from app.routes.admin import admin_bp
+    from app.routes.reports import reports_bp
+    from app.routes.cards import cards_bp
+    from app.routes.loans import loans_bp
+    from app.routes.beneficiaries import beneficiaries_bp
+    from app.routes.notifications import notifications_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
@@ -93,14 +108,29 @@ def create_app(config_class=Config):
     app.register_blueprint(transactions_bp, url_prefix='/api/transactions')
     app.register_blueprint(fraud_bp, url_prefix='/api/fraud')  # Add this line
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(reports_bp, url_prefix='/api/reports')    
+    app.register_blueprint(cards_bp, url_prefix='/api/cards')
+    app.register_blueprint(loans_bp, url_prefix='/api/loans')
+    app.register_blueprint(beneficiaries_bp, url_prefix='/api/beneficiaries')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     
     # Create database tables
+    @app.route('/')
+    def index():
+        return jsonify({
+            'name': 'IntelliBank API',
+            'version': '1.0.0',
+            'status': 'running',
+            'endpoints': '/api/health'
+        }), 200
+
     with app.app_context():
         try:
+            from app.models.notification import Notification
             db.create_all()
-            print("✅ PostgreSQL tables created successfully!")
+            print("PostgreSQL tables created successfully!")
         except Exception as e:
-            print(f"⚠️ PostgreSQL table creation error: {e}")
+            print(f"PostgreSQL table creation error: {e}")
     
     # Register error handlers
     @app.errorhandler(404)
@@ -111,26 +141,20 @@ def create_app(config_class=Config):
     def internal_error(error):
         return jsonify({'error': 'Internal server error'}), 500
     
-    # Health check endpoint
     @app.route('/api/health', methods=['GET'])
     def health_check():
-        # Check MongoDB connection properly
-        mongo_status = 'connected'
-        try:
-            # Try to ping MongoDB to verify connection
-            if mongo_client:
-                mongo_client.admin.command('ping')
-            else:
-                mongo_status = 'disconnected'
-        except Exception as e:
-            mongo_status = f'error: {str(e)}'
-            
-        status = {
-            'status': 'healthy',
-            'postgres': 'connected',
-            'mongodb': mongo_status
-        }
-        return jsonify(status), 200
+        return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}), 200
+
+    @app.route('/api/debug/routes', methods=['GET'])
+    def list_routes():
+        from flask import url_for
+        import urllib.parse
+        output = []
+        for rule in app.url_map.iter_rules():
+            methods = ','.join(rule.methods)
+            url = str(rule)
+            output.append(f"{rule.endpoint:50s} {methods:20s} {url}")
+        return jsonify(sorted(output))
 
     # Test MongoDB endpoint
     @app.route('/api/test-mongo', methods=['GET'])
@@ -157,7 +181,7 @@ def close_mongo_connection():
     global mongo_client
     if mongo_client:
         mongo_client.close()
-        print("🔌 MongoDB connection closed")
+        print("MongoDB connection closed")
 
 # Register close function to run when app exits
 atexit.register(close_mongo_connection)

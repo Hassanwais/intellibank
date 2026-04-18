@@ -104,8 +104,11 @@ def analyze_transaction():
 def get_fraud_alerts():
     """Get all fraud alerts for the logged-in user"""
     try:
-        current_user_id_str = get_jwt_identity()
-        current_user_id = int(current_user_id_str)
+        current_identity = get_jwt_identity()
+        current_user_id = int(current_identity) if current_identity else None
+        
+        if not current_user_id:
+            return jsonify({'error': 'Invalid user identity'}), 401
         
         # Get user's accounts
         accounts = Account.query.filter_by(user_id=current_user_id).all()
@@ -165,8 +168,8 @@ def update_alert(alert_id):
         alert.reviewed_at = datetime.utcnow()
         
         # Get current user ID for reviewer
-        current_user_id_str = get_jwt_identity()
-        alert.reviewed_by = int(current_user_id_str)
+        current_identity = get_jwt_identity()
+        alert.reviewed_by = int(current_identity) if current_identity else None
         
         db.session.commit()
         
@@ -181,8 +184,11 @@ def update_alert(alert_id):
 def get_fraud_stats():
     """Get fraud detection statistics for the user"""
     try:
-        current_user_id_str = get_jwt_identity()
-        current_user_id = int(current_user_id_str)
+        current_identity = get_jwt_identity()
+        current_user_id = int(current_identity) if current_identity else None
+        
+        if not current_user_id:
+            return jsonify({'error': 'Invalid user identity'}), 401
         
         # Get user's accounts
         accounts = Account.query.filter_by(user_id=current_user_id).all()

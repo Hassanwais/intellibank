@@ -1,42 +1,32 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import api from './api';
 
 const authService = {
   // Register new user
   async register(userData) {
-    try {
-      const response = await axios.post(`${API_URL}/auth/register`, userData);
-      if (response.data.access_token) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('access_token', response.data.access_token);
-        localStorage.setItem('refresh_token', response.data.refresh_token);
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+    const data = await api.post('/auth/register', userData);
+    if (data.access_token) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
     }
+    return data;
   },
 
   // Login user
   async login(email, password) {
-    try {
-      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
-      if (response.data.access_token) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('access_token', response.data.access_token);
-        localStorage.setItem('refresh_token', response.data.refresh_token);
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+    const data = await api.post('/auth/login', { email, password });
+    if (data.access_token) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
     }
+    return data;
   },
 
   // Logout
   logout() {
     localStorage.removeItem('user');
-    localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');
   },
 
@@ -47,8 +37,8 @@ const authService = {
 
   // Check if user is authenticated
   isAuthenticated() {
-    return !!localStorage.getItem('access_token');
+    return !!localStorage.getItem('token');
   }
 };
 
-export default authService; 
+export default authService;

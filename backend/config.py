@@ -5,9 +5,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # Database
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://postgres:Admin@123@localhost:5432/banking_db')
+    # Database — handle Supabase/Render postgres:// → postgresql://
+    _db_url = os.getenv('DATABASE_URL', 'postgresql://postgres:Admin%40123@localhost:5433/banking_db')
+    if _db_url.startswith('postgres://'):
+        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
     
     # MongoDB
     MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
@@ -15,7 +22,7 @@ class Config:
     
     # JWT
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
     # Security
@@ -25,8 +32,11 @@ class Config:
     # AI Model
     MODEL_PATH = os.getenv('MODEL_PATH', 'app/ai/models/fraud_detection_model.pkl')
     
-    # CORS
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    # CORS — allow localhost and any Vercel deployment
+    CORS_ORIGINS = os.getenv(
+        'CORS_ORIGINS',
+        'http://localhost:3000,http://localhost:3001,https://*.vercel.app'
+    ).split(',')
     
     # Environment
     DEBUG = os.getenv('FLASK_DEBUG', 'False') == 'True'

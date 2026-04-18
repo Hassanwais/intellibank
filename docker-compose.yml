@@ -1,1 +1,69 @@
- 
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: banking_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Admin@123
+      POSTGRES_DB: banking_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:6
+    container_name: banking_mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: banking_backend
+    working_dir: /app
+    ports:
+      - "5001:5001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:Admin%40123@db:5432/banking_db
+      - MONGO_URI=mongodb://mongo:27017/
+      - MONGO_DB=banking_logs
+      - JWT_SECRET_KEY=production-jwt-key
+      - SECRET_KEY=production-secret-key
+      - FLASK_DEBUG=1
+      - FLASK_APP=run.py
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - mongo
+
+  frontend:
+    image: node:18-alpine
+    container_name: banking_frontend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/client:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - NODE_ENV=development
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  mongo_data:

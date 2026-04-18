@@ -1,0 +1,14 @@
+venv
+tf_env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+instance/
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.flaskenv

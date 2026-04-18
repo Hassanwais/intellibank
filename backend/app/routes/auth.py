@@ -6,7 +6,9 @@ from app.models.account import Account
 from datetime import datetime
 import random
 import re
+import logging
 
+logger = logging.getLogger(__name__)
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
@@ -49,16 +51,18 @@ def register():
             account_number=account_number,
             account_type='Checking',
             balance=1000.00,  # Welcome bonus
-            currency='USD',
+            currency='NGN',
             status='Active'
         )
         
         db.session.add(new_account)
         db.session.commit()
         
-        # Generate tokens with STRING identity (FIX)
-        access_token = create_access_token(identity=str(new_user.user_id))
-        refresh_token = create_refresh_token(identity=str(new_user.user_id))
+        # Generate tokens with identity object (loader will handle string conversion)
+        access_token = create_access_token(identity=new_user)
+        refresh_token = create_refresh_token(identity=new_user)
+        
+        logger.info(f"Successful registration for user: {new_user.email}")
         
         return jsonify({
             'message': 'Registration successful',
@@ -86,17 +90,33 @@ def login():
         if not user:
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        # Check password
-        if not bcrypt.check_password_hash(user.password_hash, data['password']):
+        # Check password using Optimized Hybrid Authentication
+        is_valid = False
+        try:
+            password_hash = user.password_hash or ""
+            if password_hash.startswith(('$2b$', '$2a$', '$2y$')):
+                # Use Bcrypt only for Bcrypt hashes to avoid long CPU hangs
+                is_valid = bcrypt.check_password_hash(password_hash, data['password'])
+            else:
+                # Optimized fallback to Werkzeug for Scrypt/PBKDF2
+                from werkzeug.security import check_password_hash
+                is_valid = check_password_hash(password_hash, data['password'])
+        except Exception as e:
+            logger.error(f"Instant verification fail-safe for {user.email}: {str(e)}")
+            return jsonify({'error': 'Security check failed. Please try again.'}), 401
+            
+        if not is_valid:
             return jsonify({'error': 'Invalid credentials'}), 401
         
         # Check account status
         if user.account_status != 'Active':
             return jsonify({'error': 'Account is not active. Please contact support.'}), 403
         
-        # Generate tokens with STRING identity (FIX)
-        access_token = create_access_token(identity=str(user.user_id))
-        refresh_token = create_refresh_token(identity=str(user.user_id))
+        # Generate tokens with identity object (loader will handle string conversion)
+        access_token = create_access_token(identity=user)
+        refresh_token = create_refresh_token(identity=user)
+        
+        logger.info(f"Successful login for user: {user.email}")
         
         # Update last login
         user.last_login = datetime.utcnow()

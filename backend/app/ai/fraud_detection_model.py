@@ -38,10 +38,10 @@ class FraudDetectionModel:
             is_fraud = 1 if random.random() < 0.1 else 0  # 10% fraud rate
             
             # Generate features
-            amount = random.uniform(10, 5000)
+            amount = random.uniform(10, 50000)
             if is_fraud:
-                # Fraudulent transactions tend to be larger
-                amount = random.uniform(1000, 10000)
+                # Fraudulent transactions tend to be even larger or more irregular
+                amount = random.uniform(1000, 100000)
             
             hour = random.randint(0, 23)
             day = random.randint(0, 6)
@@ -226,7 +226,7 @@ class FraudDetectionModel:
             self.model = model_data['model']
             self.scaler = model_data['scaler']
             self.label_encoders = model_data['label_encoders']
-            print(f"✅ Model loaded from {self.model_path}")
+            print(f"Model loaded from {self.model_path}")
             return True
         else:
             print(f"❌ Model not found at {self.model_path}")

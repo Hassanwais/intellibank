@@ -6,14 +6,46 @@ env/
 # Python cache
 __pycache__/
 *.pyc
-
-# Large files
+*.pyo
 *.pyd
+
+# Large binary files
 *.dll
 *.lib
 
 # Jupyter
 .ipynb_checkpoints/
 
-# Environment variables
+# Secrets — NEVER commit these
 .env
+backend/.env
+frontend/client/.env.production
+*.env.local
+
+# Node
+node_modules/
+frontend/client/dist/
+frontend/client/.cache/
+frontend/client/build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ML models (large — add with git-lfs if needed)
+backend/app/ai/models/*.pkl
+backend/app/ai/models/*.h5

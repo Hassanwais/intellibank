@@ -1,89 +1,31 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import api from './api';
 
 const fraudService = {
   // Get all fraud alerts for the logged-in user
   async getFraudAlerts() {
-    try {
-      const token = localStorage.getItem('access_token');
-      
-      const response = await axios.get(`${API_URL}/fraud/alerts`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching fraud alerts:', error.response || error);
-      throw error.response?.data || { error: 'Failed to load fraud alerts' };
-    }
+    return await api.get('/fraud/alerts');
   },
 
   // Analyze a transaction for fraud
   async analyzeTransaction(transactionId, locationData = {}) {
-    try {
-      const token = localStorage.getItem('access_token');
-      
-      const response = await axios.post(`${API_URL}/fraud/analyze`, {
-        transaction_id: transactionId,
-        distance_from_home: locationData.distance || 0,
-        is_international: locationData.isInternational || false
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error analyzing transaction:', error.response || error);
-      throw error.response?.data || { error: 'Failed to analyze transaction' };
-    }
+    return await api.post('/fraud/analyze', {
+      transaction_id: transactionId,
+      distance_from_home: locationData.distance || 0,
+      is_international: locationData.isInternational || false
+    });
   },
 
   // Update fraud alert status (reviewed, false positive, etc.)
   async updateAlertStatus(alertId, status, notes = '') {
-    try {
-      const token = localStorage.getItem('access_token');
-      
-      const response = await axios.put(`${API_URL}/fraud/alerts/${alertId}`, {
-        status: status,
-        resolution_notes: notes
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error updating alert:', error.response || error);
-      throw error.response?.data || { error: 'Failed to update alert' };
-    }
+    return await api.put(`/fraud/alerts/${alertId}`, {
+      status: status,
+      resolution_notes: notes
+    });
   },
 
   // Get fraud statistics
   async getFraudStats() {
-    try {
-      const token = localStorage.getItem('access_token');
-      
-      const response = await axios.get(`${API_URL}/fraud/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching fraud stats:', error.response || error);
-      throw error.response?.data || { error: 'Failed to load fraud stats' };
-    }
+    return await api.get('/fraud/stats');
   },
 
   // Helper function to get color based on risk level
@@ -109,4 +51,4 @@ const fraudService = {
   }
 };
 
-export default fraudService; 
+export default fraudService;
